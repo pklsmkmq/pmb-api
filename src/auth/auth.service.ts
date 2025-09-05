@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt'; // <-- IMPORT BARU
 import { LoginDto } from './dto/login.dto'; // <-- IMPORT BARU
 import { JwtService } from '@nestjs/jwt';
+import { LoginResponse } from './interfaces/login-response.interface';
 
 @Injectable()
 export class AuthService {
@@ -16,26 +17,35 @@ export class AuthService {
         private jwtService: JwtService,
     ) { }
 
-    async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
+    async login(loginDto: LoginDto): Promise<LoginResponse> {
         const { email, password } = loginDto;
 
         // 1. Cari user berdasarkan email
         const user = await this.usersRepository.findOne({ where: { email } });
 
-        // 2. Jika user ditemukan DAN password-nya cocok
+        // ... di dalam method login
         if (user && (await bcrypt.compare(password, user.password))) {
-            // 3. Buat payload untuk JWT
+            // 3. Buat payload untuk JWT (tidak ada perubahan di sini)
             const payload = {
                 id: user.id,
                 email: user.email,
-                role: user.role // <-- Sertakan role dalam token!
+                role: user.role
             };
-
-            // 4. Buat JWT Token
             const accessToken = this.jwtService.sign(payload);
 
-            // 5. Kembalikan token
-            return { accessToken };
+            // --- BAGIAN YANG DIUBAH ---
+
+            // 4. Hapus password dari objek user demi keamanan
+            const { password, ...userData } = user;
+
+            // 5. Susun dan kembalikan objek respons sesuai format baru
+            return {
+                message: 'berhasil login',
+                user: userData,
+                accessToken: accessToken,
+            };
+            // -------------------------
+
         } else {
             // 6. Jika user tidak ditemukan ATAU password salah
             throw new UnauthorizedException('Kredensial tidak valid. Silakan cek email dan password Anda.');

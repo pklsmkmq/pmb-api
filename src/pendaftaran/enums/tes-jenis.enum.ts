@@ -1,0 +1,6 @@
+export enum TesJenis {
+    AKADEMIK = 'AKADEMIK',
+    WAWANCARA = 'WAWANCARA',
+    ALQURAN = 'ALQURAN',
+    MINAT_BAKAT = 'MINAT_BAKAT',
+}

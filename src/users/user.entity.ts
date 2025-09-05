@@ -1,7 +1,9 @@
 // src/users/user.entity.ts
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from './user-role.enum'; // <-- IMPORT BARU
+import { Biodata } from '../pendaftaran/entities/biodata.entity';
+import { Pendaftaran } from '../pendaftaran/entities/pendaftaran.entity';
 
 @Entity('users')
 export class User {
@@ -31,6 +33,18 @@ export class User {
     })
     role: UserRole;
     // -----------------------------
+
+    @OneToOne(() => Biodata, (biodata) => biodata.user)
+    biodata: Biodata;
+
+    @OneToOne(() => Pendaftaran, (pendaftaran) => pendaftaran.user)
+    pendaftaran: Pendaftaran;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 
     @BeforeInsert()
     async hashPassword() {

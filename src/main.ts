@@ -6,6 +6,8 @@ import { ValidationPipe } from '@nestjs/common'; // <-- Import
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
   // Aktifkan ValidationPipe secara global
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true, // Otomatis menghapus properti yang tidak ada di DTO
