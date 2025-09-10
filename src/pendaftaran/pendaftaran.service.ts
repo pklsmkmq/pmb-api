@@ -11,10 +11,17 @@ import { VerifyPendaftaranDto } from './dto/verify-pendaftaran.dto';
 import { JadwalTes } from './entities/jadwal-tes.entity';
 import { CreateJadwalDto } from './dto/create-jadwal.dto';
 import { PendaftaranStatus } from './enums/pendaftaran-status.enum';
+import { UserRole } from '../users/user-role.enum';
+import { FilterSantriDto } from './dto/filter-santri.dto';
+import { StatusPendaftaranFilter } from './enums/status-pendaftaran-filter.enum';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 @Injectable()
 export class PendaftaranService {
     constructor(
+        @InjectRepository(User)
+        private userRepository: Repository<User>,
         @InjectRepository(Biodata)
         private biodataRepository: Repository<Biodata>,
         @InjectRepository(Pendaftaran)
@@ -108,5 +115,59 @@ export class PendaftaranService {
 
         // 6. Simpan ke database
         return this.jadwalTesRepository.save(newJadwal);
+    }
+
+    async findAllSantri(filterDto: FilterSantriDto) {
+        const { jurusan, statusPendaftaran, page = 1, limit = 10 } = filterDto;
+
+        // 1. MEMBUAT QUERY MENGGUNAKAN QUERY BUILDER
+        const query = this.userRepository.createQueryBuilder('user')
+            .leftJoinAndSelect('user.biodata', 'biodata') // LEFT JOIN ke tabel biodata
+            .leftJoinAndSelect('user.pendaftaran', 'pendaftaran') // LEFT JOIN ke tabel pendaftaran
+            .where('user.role = :role', { role: UserRole.SANTRI }); // Hanya ambil user dengan role SANTRI
+
+        // 2. MENERAPKAN FILTER KONDISIONAL
+        if (jurusan) {
+            query.andWhere('biodata.jurusan = :jurusan', { jurusan });
+        }
+
+        if (statusPendaftaran) {
+            if (statusPendaftaran === StatusPendaftaranFilter.SUDAH_MENDAFTAR) {
+                query.andWhere('pendaftaran.id IS NOT NULL'); // Jika pendaftaran.id ada, berarti sudah mendaftar
+            } else if (statusPendaftaran === StatusPendaftaranFilter.BELUM_MENDAFTAR) {
+                query.andWhere('pendaftaran.id IS NULL'); // Jika pendaftaran.id null, berarti belum mendaftar
+            }
+        }
+
+        // 3. MENERAPKAN PAGINASI
+        query.skip((page - 1) * limit).take(limit);
+
+        // 4. EKSEKUSI QUERY DAN MENGAMBIL HASIL
+        const [users, total] = await query.getManyAndCount();
+
+        // 5. TRANSFORMASI DATA SESUAI FORMAT YANG DIINGINKAN
+        const data = users.map(user => ({
+            id: user.id,
+            nama: user.namaSantri ?? '-', // <-- DIUBAH: Mengambil dari tabel user
+            nomorTelepon: user.nomorHandphone ?? '-', // <-- BARU: Menambahkan nomor telepon
+            sekolahAsal: user.biodata?.sekolahAsal ?? '-',
+            jurusan: user.biodata?.jurusan ?? '-',
+            jumlahHafalanJuz: user.biodata?.jumlahHafalanJuz ?? '-',
+            ilmuIT: user.biodata?.ilmuIT ?? '-',
+            statusPembayaran: user.pendaftaran?.statusPembayaran ?? '-',
+            buktiPembayaran: user.pendaftaran?.buktiPembayaranUrl ?? '-',
+            // <-- BARU: Menambahkan tanggal registrasi yang diformat
+            tanggalRegistrasi: user.createdAt
+                ? format(user.createdAt, 'EEEE, dd MMMM yyyy HH:mm', { locale: id })
+                : '-',
+        }));
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
 }

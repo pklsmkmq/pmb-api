@@ -7,47 +7,69 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt'; // <-- IMPORT BARU
 import { LoginDto } from './dto/login.dto'; // <-- IMPORT BARU
 import { JwtService } from '@nestjs/jwt';
-import { LoginResponse } from './interfaces/login-response.interface';
+import { LoginResponse, PendaftaranStatusInfo } from './interfaces/login-response.interface';
+import { UserRole } from '../users/user-role.enum'; // <-- Import UserRole
+import { Pendaftaran } from '../pendaftaran/entities/pendaftaran.entity';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        @InjectRepository(Pendaftaran)
+        private pendaftaranRepository: Repository<Pendaftaran>,
         private jwtService: JwtService,
     ) { }
 
     async login(loginDto: LoginDto): Promise<LoginResponse> {
         const { email, password } = loginDto;
 
-        // 1. Cari user berdasarkan email
         const user = await this.usersRepository.findOne({ where: { email } });
 
-        // ... di dalam method login
         if (user && (await bcrypt.compare(password, user.password))) {
-            // 3. Buat payload untuk JWT (tidak ada perubahan di sini)
             const payload = {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
             };
             const accessToken = this.jwtService.sign(payload);
 
-            // --- BAGIAN YANG DIUBAH ---
-
-            // 4. Hapus password dari objek user demi keamanan
             const { password, ...userData } = user;
 
-            // 5. Susun dan kembalikan objek respons sesuai format baru
+            // --- LOGIKA TAMBAHAN UNTUK SANTRI ---
+            let pendaftaranStatus: PendaftaranStatusInfo | null = null;
+
+            if (user.role === UserRole.SANTRI) {
+                const pendaftaran = await this.pendaftaranRepository.findOne({
+                    where: { user: { id: user.id } },
+                    relations: ['jadwalTes'], // Kita butuh relasi ini untuk mengecek jadwal
+                });
+
+                if (pendaftaran) {
+                    pendaftaranStatus = {
+                        sudahMendaftar: true,
+                        statusPembayaran: pendaftaran.statusPembayaran,
+                        sudahMenjadwalkanTes: pendaftaran.jadwalTes.length > 0,
+                    };
+                } else {
+                    pendaftaranStatus = {
+                        sudahMendaftar: false,
+                        statusPembayaran: null,
+                        sudahMenjadwalkanTes: false,
+                    };
+                }
+            }
+            // --- AKHIR LOGIKA TAMBAHAN ---
+
             return {
                 message: 'berhasil login',
-                user: userData,
-                accessToken: accessToken,
+                data: {
+                    user: userData,
+                    accessToken: accessToken,
+                    pendaftaranStatus: pendaftaranStatus, // <-- Tambahkan ke response
+                },
             };
-            // -------------------------
-
         } else {
-            // 6. Jika user tidak ditemukan ATAU password salah
             throw new UnauthorizedException('Kredensial tidak valid. Silakan cek email dan password Anda.');
         }
     }

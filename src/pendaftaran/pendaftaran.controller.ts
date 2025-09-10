@@ -1,5 +1,5 @@
 // src/pendaftaran/pendaftaran.controller.ts
-import { Controller, Post, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req, Patch, Param, Get, Query, ValidationPipe } from '@nestjs/common';
 import { PendaftaranService } from './pendaftaran.service';
 import { CreatePendaftaranDto } from './dto/create-pendaftaran.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -9,6 +9,7 @@ import { UserRole } from '../users/user-role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VerifyPendaftaranDto } from './dto/verify-pendaftaran.dto';
 import { CreateJadwalDto } from './dto/create-jadwal.dto';
+import { FilterSantriDto } from './dto/filter-santri.dto';
 
 @Controller('pendaftaran')
 export class PendaftaranController {
@@ -52,5 +53,12 @@ export class PendaftaranController {
     ) {
         const user = req.user; // Santri yang login dari JwtStrategy
         return this.pendaftaranService.scheduleTest(createJadwalDto, user);
+    }
+
+    @Get('/santri')
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles(UserRole.ADMIN) // Hanya Admin yang bisa mengakses
+    findAllSantri(@Query(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } })) filterDto: FilterSantriDto) {
+        return this.pendaftaranService.findAllSantri(filterDto);
     }
 }

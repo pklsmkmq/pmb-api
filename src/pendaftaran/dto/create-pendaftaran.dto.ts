@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsNumber, IsEnum, IsOptional } from 'class-validator';
+import { Jurusan } from '../enums/jurusan.enum';
 
 export class CreatePendaftaranDto {
   @IsString()
@@ -24,4 +25,16 @@ export class CreatePendaftaranDto {
   @IsDateString()
   @IsNotEmpty()
   tanggalLahir: Date;
+
+  @IsString()
+  @IsOptional()
+  jumlahHafalanJuz?: string;
+
+  @IsEnum(Jurusan)
+  @IsNotEmpty()
+  jurusan: Jurusan;
+
+  @IsString()
+  @IsOptional()
+  ilmuIT?: string;
 }
