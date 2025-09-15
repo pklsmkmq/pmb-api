@@ -62,15 +62,15 @@ export class PendaftaranService {
         });
     }
 
-    async verify(pendaftaranId: number, verifyPendaftaranDto: VerifyPendaftaranDto, admin: User) {
+    async verify(userId: number, verifyPendaftaranDto: VerifyPendaftaranDto, admin: User) {
         // 1. Cari pendaftaran berdasarkan ID
         const pendaftaran = await this.pendaftaranRepository.findOne({
-            where: { id: pendaftaranId },
+            where: { user: { id: userId } },
         });
 
         // 2. Jika tidak ditemukan, lempar error
         if (!pendaftaran) {
-            throw new NotFoundException(`Pendaftaran dengan ID ${pendaftaranId} tidak ditemukan.`);
+            throw new NotFoundException(`Pendaftaran untuk User dengan ID ${userId} tidak ditemukan.`);
         }
 
         // 3. Update status dan data verifikasi

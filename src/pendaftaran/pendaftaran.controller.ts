@@ -32,16 +32,16 @@ export class PendaftaranController {
         return this.pendaftaranService.create(createPendaftaranDto, file, user);
     }
 
-    @Patch(':id/verify')
+    @Patch(':userId/verify')
     @UseGuards(AuthGuard('jwt'), RolesGuard)
     @Roles(UserRole.ADMIN) // Hanya Admin yang bisa mengakses
     verify(
-        @Param('id') id: number,
+        @Param('userId') userId: number,
         @Body() verifyPendaftaranDto: VerifyPendaftaranDto,
         @Req() req: any,
     ) {
         const admin = req.user; // Admin yang login dari JwtStrategy
-        return this.pendaftaranService.verify(id, verifyPendaftaranDto, admin);
+        return this.pendaftaranService.verify(userId, verifyPendaftaranDto, admin);
     }
 
     @Post('jadwal')

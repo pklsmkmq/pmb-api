@@ -34,7 +34,7 @@ export class Biodata {
     })
     jurusan: Jurusan;
 
-    @Column({ type: 'text', default: '-' })
+    @Column({ type: 'text', nullable: true })
     ilmuIT: string;
 
     // Relasi One-to-One ke User
